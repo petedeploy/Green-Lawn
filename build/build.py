@@ -8,6 +8,19 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..")
 SITE = "https://www.greenlawnfertilizing.com"
 CLEAN = "--clean-urls" in sys.argv   # root-relative links for a web server; default is relative links that open from disk
+# Default build is demo-clean: content gaps are hidden so the concept can be shown as-is.
+# --show-todos brings back the orange tags and placeholder blocks for the content checklist.
+TODOS = "--show-todos" in sys.argv
+IMG_DIR = os.path.join(OUT, "assets", "img")   # filled by build/fetch_images.py; falls back to HubSpot URLs when empty
+
+# One place for company figures, so pages can't drift apart
+CUSTOMERS = "70,000+"   # Green Lawn + Green Pest Solutions, per the live About page (May 2026 press said 65,000+)
+TEAM = "400+"
+BRANCHES = 7
+
+def todo(label):
+    """An orange content tag, shown only with --show-todos."""
+    return f' <span class="tag">{html.escape(label)}</span>' if TODOS else ""
 
 # Live URL paths, kept identical so no rankings or backlinks are lost
 PATHS = {
@@ -19,7 +32,10 @@ PATHS = {
  "fungicide-program": "services/fungicide-program", "grub-control": "services/grub-control",
  "lime-applications": "services/lime-application", "commercial-services": "commercial-services",
  "pest-control": "services/green-pest-solutions",
+ # Concept-only pages: not on the live site, kept out of the sitemap
+ "portal": "concept/my-lawn", "systems": "concept/how-it-works",
 }
+CONCEPT_PAGES = {"portal", "systems"}
 # Existing live pages this concept doesn't redesign: link to them so internal links aren't lost
 LIVE = {
  "blog": ("Blog", "/blog"), "library": ("Lawn Libraries", "/library"), "guides": ("Lawn Care Guides", "/lawn-care-guides"),
@@ -50,6 +66,21 @@ def img(path, w=1600):
     enc = quote(path)
     name = quote(path.split("/")[-1])
     return f"https://www.greenlawnfertilizing.com/hs-fs/hubfs/{enc}?width={w}&name={name}"
+
+def local_name(path):
+    """File name a hubfs path is saved under in assets/img/ (see fetch_images.py)."""
+    base, dot, ext = path.lower().rpartition(".")
+    return re.sub(r"[^a-z0-9]+", "-", base).strip("-") + "." + ext
+
+def src(path, w=1600):
+    """<img src> for page markup: the local copy if fetch_images.py has downloaded it, else the HubSpot URL.
+    og:image and schema keep using img(), since those need absolute URLs."""
+    if os.path.exists(os.path.join(IMG_DIR, local_name(path))):
+        return "@@assets@@/img/" + local_name(path)
+    return img(path, w)
+
+def logo_src():
+    return "@@assets@@/img/logo.svg" if os.path.exists(os.path.join(IMG_DIR, "logo.svg")) else LOGO
 
 P = {
  "grill": "Lifestyle Photos 2025/customer-man-woman-lifestyle-grill-yard122.jpg",
@@ -346,6 +377,20 @@ KW = {
  "commercial-services": "Commercial Lawn Care", "pest-control": "Pest Control",
 }
 REGION = "in PA, NJ & DE"
+# Estimate-form headline and subline per service, so the ask matches the page
+FORM_H = {
+ "lawn-care-program": ("What would it take to fix your lawn?", "Start with your address. A local expert will tell you, free."),
+ "natural-program": ("Ready for a greener lawn, naturally?", "Start with your address. We’ll build your organic program, free."),
+ "tree-shrub-care": ("How healthy are your trees and shrubs?", "Start with your address. A certified technician will take a look, free."),
+ "mosquito-control": ("Want your evenings outside back?", "Start with your address. We’ll price your mosquito program, free."),
+ "aeration-seeding": ("Thin spots you want filled in?", "Start with your address. We’ll measure and price it, free."),
+ "flea-tick-control": ("Want fewer ticks where your family plays?", "Start with your address. We’ll price your flea and tick program, free."),
+ "fungicide-program": ("Brown patches you can’t explain?", "Start with your address. A local expert will diagnose it, free."),
+ "grub-control": ("Protect your lawn’s roots this year.", "Start with your address. We’ll time your grub treatment, free."),
+ "lime-applications": ("Is your soil holding your lawn back?", "Start with your address. Your pH test is free."),
+ "commercial-services": ("Need a lawn program for your property?", "Start with the property address. We’ll put together a proposal, free."),
+ "pest-control": ("Pests getting into your home?", "Start with your address. Your pest evaluation is free."),
+}
 
 AREAS = [
  dict(slug="pennsylvania", name="Pennsylvania", abbr="PA",
@@ -394,7 +439,7 @@ def head(title, desc, key, og_img, schema):
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<div class="concept" role="note"><strong>Design concept</strong> for Green Lawn Fertilizing. Not the live site, and forms don’t send anything.</div>
+<div class="concept" role="note"><strong>Design concept</strong> for Green Lawn Fertilizing. Not the live site, and forms don’t send anything. <a href="@@portal@@">My Lawn portal</a> · <a href="@@systems@@">How it works</a></div>
 '''
 
 def header(current=None):
@@ -411,7 +456,7 @@ def header(current=None):
     return f'''<header class="site">
   <div class="wrap">
     <div class="bar">
-      <a class="logo" href="@@home@@" aria-label="Green Lawn Fertilizing home"><img src="{LOGO}" alt="Green Lawn Fertilizing"></a>
+      <a class="logo" href="@@home@@" aria-label="Green Lawn Fertilizing home"><img src="{logo_src()}" alt="Green Lawn Fertilizing"></a>
       <nav class="main" aria-label="Main">
         <div class="dd{svc_cur}"><button type="button" aria-expanded="false">Services{ICON["chev"]}</button><div class="dd-panel cols">{svc_links}</div></div>
         <div class="dd{area_cur}"><button type="button" aria-expanded="false">Service area{ICON["chev"]}</button><div class="dd-panel">{area_links}</div></div>
@@ -419,13 +464,13 @@ def header(current=None):
         <a href="@@about@@"{cur("about")}>About us</a>
       </nav>
       <div class="hdr-actions">
-        <a class="login" href="{LOGIN}">Customer login</a>
+        <a class="login" href="@@portal@@">Customer login</a>
         <a class="hdr-phone" href="{TEL}" aria-label="Call {PHONE}">{ICON["phone"]}<span class="num">{PHONE}<small>Talk to a lawn expert</small></span></a>
         <a class="btn btn-primary" href="@@estimate@@">Get a free estimate</a>
         <button class="menu-btn" type="button" aria-label="Menu" aria-expanded="false">{ICON["menu"]}</button>
       </div>
     </div>
-    <div class="mnav"><h4>Services</h4>{m_svc}<h4>Service area</h4>{m_area}<h4>Learning center</h4>{m_lc}<h4>Company</h4><a href="@@about@@">About us</a><a href="{live("offers")}">Special offers</a><a href="{LOGIN}">Customer login</a><a class="btn btn-primary" href="@@estimate@@">Get a free estimate</a></div>
+    <div class="mnav"><h4>Services</h4>{m_svc}<h4>Service area</h4>{m_area}<h4>Learning center</h4>{m_lc}<h4>Company</h4><a href="@@about@@">About us</a><a href="{live("offers")}">Special offers</a><a href="@@portal@@">Customer login</a><a class="btn btn-primary" href="@@estimate@@">Get a free estimate</a></div>
   </div>
 </header>
 '''
@@ -434,12 +479,12 @@ def footer():
     svc = "".join(f'<li><a href="@@{s["slug"]}@@">{e(s["name"])}</a></li>' for s in S[:6])
     svc2 = "".join(f'<li><a href="@@{s["slug"]}@@">{e(s["name"])}</a></li>' for s in S[6:])
     areas = "".join(f'<li><a href="@@{a["slug"]}@@">{e(a["name"])}</a></li>' for a in AREAS)
-    res = "".join(f'<li><a href="{live(k)}">{e(LIVE[k][0])}</a></li>' for k in ["blog","guides","testimonials","offers","referral","review","charity"]) + f'<li><a href="{LOGIN}">Customer login</a></li>'
+    res = "".join(f'<li><a href="{live(k)}">{e(LIVE[k][0])}</a></li>' for k in ["blog","guides","testimonials","offers","referral","review","charity"]) + '<li><a href="@@portal@@">Customer login (concept)</a></li><li><a href="@@systems@@">How it works (concept)</a></li>'
     return f'''<footer>
   <div class="wrap">
     <div class="foot">
       <div class="brand">
-        <img src="{LOGO}" alt="Green Lawn Fertilizing">
+        <img src="{logo_src()}" alt="Green Lawn Fertilizing">
         <p>Locally owned lawn, tree and shrub care since 2004.</p>
         <p style="margin-top:12px">1025 Andrew Dr.<br>West Chester, PA 19380</p>
         <p style="margin-top:12px"><a href="{TEL}" style="font-weight:800;font-size:18px">{PHONE}</a></p>
@@ -514,7 +559,7 @@ def hero(photo, alt, crumbs, kw, h1, lede, items, form, price=None, proof=True, 
     pc = f'<div class="price-chip">Starting at <b>{e(price[0])}</b> {e(price[1])}</div>' if price else ""
     pf = '<div class="hero-proof"><span class="stars" aria-hidden="true">★★★★★</span><b>4.71</b><span>from 19,345 ratings</span><span class="divider"></span><span>Locally owned since 2004</span></div>' if proof else ""
     return f'''<section class="hero {cls}" style="padding:0">
-  <div class="hero-bg"><img src="{img(P[photo],2000)}" alt="{e(alt)}" fetchpriority="high"></div>
+  <div class="hero-bg"><img src="{src(P[photo],2000)}" alt="{e(alt)}" fetchpriority="high"></div>
   <div class="wrap hero-in">
     <div class="hero-copy">
       <div class="crumb">{crumb}</div>
@@ -531,7 +576,7 @@ def hero(photo, alt, crumbs, kw, h1, lede, items, form, price=None, proof=True, 
 '''
 
 def trust():
-    b = "".join(f'<img src="{img(f,250)}" alt="{e(a)}" loading="lazy">' for f,a in BADGES[:5])
+    b = "".join(f'<img src="{src(f,250)}" alt="{e(a)}" loading="lazy">' for f,a in BADGES[:5])
     return f'''<div class="trust"><div class="wrap">
   <div class="trust-rating"><b>4.71</b><div><span class="stars" aria-hidden="true">★★★★★</span><small>19,345 customer ratings</small></div></div>
   <div class="badges">{b}</div>
@@ -572,14 +617,14 @@ def faq_block(faqs, title="Questions before you start?", intro="Hiring a lawn co
 '''
 
 def awards():
-    b = "".join(f'<img src="{img(f,250)}" alt="{e(a)}" loading="lazy">' for f,a in BADGES)
+    b = "".join(f'<img src="{src(f,250)}" alt="{e(a)}" loading="lazy">' for f,a in BADGES)
     return f'''<section class="awards"><div class="wrap">
   <h2>Recognized for service, growth and workplace</h2>
   <div class="awards-row">{b}</div>
 </div></section>
 '''
 
-def final(selected="Lawn care", h="Get a head start on a greener spring.", lede="Get your free analysis now, and your program will be ready to start when the season does."):
+def final(selected="Lawn care", h="Get a head start on a greener spring.", lede="Get your free analysis now, and your program will be ready to start when the season does.", form_h=FORM_H["lawn-care-program"]):
     return f'''<section class="final" id="estimate">
   <div class="wrap">
     <div class="final-grid">
@@ -587,13 +632,27 @@ def final(selected="Lawn care", h="Get a head start on a greener spring.", lede=
         <h2>{e(h)}</h2>
         <p class="lede">{e(lede)}</p>
         {checks(["Free, no-obligation analysis","100% satisfaction guarantee on our lawn program","4.71★ from 19,345 customer ratings"])}
-        <div class="final-phone">{ICON["phone"]}<div><a href="{TEL}">{PHONE}</a><small>Talk to a lawn expert <span class="tag">add hours</span></small></div></div>
+        <div class="final-phone">{ICON["phone"]}<div><a href="{TEL}">{PHONE}</a><small>Talk to a lawn expert{todo("add hours")}</small></div></div>
       </div>
-      {lead_form(selected, or_call=False)}
+      {lead_form(selected, heading=form_h[0], sub=form_h[1], or_call=False)}
     </div>
   </div>
 </section>
 '''
+
+def reviews_block():
+    """Placeholder review cards with --show-todos. In the demo build, a ratings summary that makes no quotes up."""
+    if TODOS:
+        return f'''<div class="reviews">
+        <div class="review"><span class="stars" aria-hidden="true">★★★★★</span><p>Real Google review about a visible result, such as weeds gone or a thicker lawn.</p><small>First name, town</small>{todo("pull from Google reviews")}</div>
+        <div class="review"><span class="stars" aria-hidden="true">★★★★★</span><p>Real review about the technician or how easy the service was.</p><small>First name, town</small>{todo("pull from Google reviews")}</div>
+        <a class="more" href="{live("testimonials")}">Read all 19,345 ratings</a>
+      </div>'''
+    return f'''<div class="reviews">
+        <div class="review rating-sum"><b>4.71</b><div><span class="stars" aria-hidden="true">★★★★★</span><p>Average from 19,345 customer ratings across PA, NJ and DE.</p></div></div>
+        <div class="review"><h3>What customers tell us</h3><ul class="checks dark"><li>{ICON["check"]}<span>Fewer weeds and greener, thicker grass</span></li><li>{ICON["check"]}<span>Fast, careful technicians</span></li><li>{ICON["check"]}<span>Helpful service summaries after each visit</span></li></ul></div>
+        <a class="more" href="{live("testimonials")}">Read customer reviews</a>
+      </div>'''
 
 def results(alt=True):
     return f'''<section{' class="alt"' if alt else ""}>
@@ -604,14 +663,10 @@ def results(alt=True):
     </div>
     <div class="results-grid">
       <div>
-        <div class="ba"><img src="{img(P["ba"],1400)}" alt="The same front lawn before treatment, thin and patchy, and after, thick and green" loading="lazy"></div>
-        <p class="ba-cap">Customer lawn, before and after. <span class="tag">add town and program</span></p>
+        <div class="ba"><img src="{src(P["ba"],1400)}" alt="The same front lawn before treatment, thin and patchy, and after, thick and green" loading="lazy"></div>
+        <p class="ba-cap">Customer lawn, before and after.{todo("add town and program")}</p>
       </div>
-      <div class="reviews">
-        <div class="review"><span class="stars" aria-hidden="true">★★★★★</span><p>Real Google review about a visible result, such as weeds gone or a thicker lawn.</p><small>First name, town</small> <span class="tag">pull from Google reviews</span></div>
-        <div class="review"><span class="stars" aria-hidden="true">★★★★★</span><p>Real review about the technician or how easy the service was.</p><small>First name, town</small> <span class="tag">pull from Google reviews</span></div>
-        <a class="more" href="#">Read all 19,345 ratings</a>
-      </div>
+      {reviews_block()}
     </div>
     <div class="inline-cta">
       <p>Does your lawn look more like the left photo?<span>Find out what it would take to get it to the right. The analysis is free.</span></p>
@@ -626,7 +681,7 @@ def svc_cards(slugs, alt=False):
     for sl in slugs:
         s = SBY[sl]
         meta = f'Starting at {s["price"]} <span>{e(s["price_note"].split(",")[0])}</span>' if s.get("price") else "<span>Free estimate</span>"
-        cards += f'''<a class="svc-card" href="@@{sl}@@"><div class="ph"><img src="{img(P[s["card_img"]],900)}" alt="{e(KW[sl])} by Green Lawn Fertilizing" loading="lazy"></div><div class="bd"><h3>{e(s["name"])}</h3><p>{e(s["card"])}</p><div class="meta"><span>{meta}</span><span class="go">Learn more</span></div></div></a>'''
+        cards += f'''<a class="svc-card" href="@@{sl}@@"><div class="ph"><img src="{src(P[s["card_img"]],900)}" alt="{e(KW[sl])} by Green Lawn Fertilizing" loading="lazy"></div><div class="bd"><h3>{e(s["name"])}</h3><p>{e(s["card"])}</p><div class="meta"><span>{meta}</span><span class="go">Learn more</span></div></div></a>'''
     return f'<div class="svc-cards">{cards}</div>'
 
 BUSINESS = {
@@ -642,7 +697,7 @@ def crumbs_for(key):
     trail = [("Home","home")]
     if key in SBY: trail += [("Services",None),(SBY[key]["name"],key)]
     elif key in [a["slug"] for a in AREAS]: trail += [("Service area",None),(next(a["name"] for a in AREAS if a["slug"]==key),key)]
-    elif key != "home": trail += [({"about":"About us","estimate":"Free estimate"}[key],key)]
+    elif key != "home": trail += [({"about":"About us","estimate":"Free estimate","portal":"My Lawn","systems":"How it works"}[key],key)]
     items, pos = [], 1
     for name,k in trail:
         if k is None: continue
@@ -658,6 +713,7 @@ def link_for(target, here):
 
 def add_sizes(html_):
     rev = {quote(v): k for k,v in P.items()}
+    rev_local = {local_name(v): k for k,v in P.items()}
     def fix(m):
         tag = m.group(0)
         if " width=" in tag: return tag
@@ -666,7 +722,10 @@ def add_sizes(html_):
             path = u.split("/hs-fs/hubfs/")[1].split("?")[0]
             k = rev.get(path)
             wh = SIZES.get(k) if k else (250,250)
-        elif u == LOGO:
+        elif u.startswith("@@assets@@/img/") and not u.endswith("logo.svg"):
+            k = rev_local.get(u.rsplit("/", 1)[1])
+            wh = SIZES.get(k) if k else (250,250)
+        elif u in (LOGO, "@@assets@@/img/logo.svg"):
             wh = (300,103)
         else:
             return tag
@@ -695,13 +754,13 @@ def build_service(s):
     price = (s["price"], s["price_note"]) if s.get("price") else None
     kw = KW[s["slug"]]
     body = hero(s["hero"], f'{s["name"]} from Green Lawn Fertilizing', [("Home","@@home@@"),("Services","@@home@@#services"),(s["name"],None)],
-                f'{kw} {REGION}', s["h1"], s["lede"], s["checks"], lead_form(s["chip"]), price=price)
+                f'{kw} {REGION}', s["h1"], s["lede"], s["checks"], lead_form(s["chip"], *FORM_H[s["slug"]]), price=price)
     body += trust()
 
     # Included
     inc = "".join(f'<li>{ICON["check"]}<div>{e(t)}<span>{e(d)}</span></div></li>' for t,d in s["included"])
     wide = s.get("inc_img_wide")
-    photo = f'<figure class="photo-frame{" wide" if wide else ""}"><img src="{img(P[s["inc_img"]],1400)}" alt="{e(KW[s["slug"]])} from Green Lawn Fertilizing" loading="lazy"></figure>'
+    photo = f'<figure class="photo-frame{" wide" if wide else ""}"><img src="{src(P[s["inc_img"]],1400)}" alt="{e(KW[s["slug"]])} from Green Lawn Fertilizing" loading="lazy"></figure>'
     extra = ""
     if s.get("honest"):
         extra += f'<div class="honest"><b>{e(s["honest"][0])}</b><p>{e(s["honest"][1])}</p></div>'
@@ -727,7 +786,7 @@ def build_service(s):
             style = ' style="border:2px solid var(--green)"' if best else ""
             badge = '<span class="tag" style="margin-bottom:10px">Best value</span><br>' if best else ""
             cards += f'<div class="card"{style}>{badge}<h3>{e(n)}</h3><p style="margin:6px 0 10px"><b style="font-family:var(--serif);font-size:34px;color:var(--head)">{e(p_)}</b> {e(u)}</p><p>{e(d)}</p></div>'
-        alt_blocks += f'<div class="sec-head"><h2>Simple per-visit pricing</h2><p class="lede">Starting prices per visit. Your estimate confirms the price for your property. <span class="tag">confirm package contents</span></p></div><div class="grid-3">{cards}</div>'
+        alt_blocks += f'<div class="sec-head"><h2>Simple per-visit pricing</h2><p class="lede">Starting prices per visit. Your estimate confirms the price for your property.{todo("confirm package contents")}</p></div><div class="grid-3">{cards}</div>'
     if s.get("diseases"):
         cards = "".join(f'<div class="card"><div class="ic">{ICON["leaf"]}</div><h3>{e(n)}</h3><p>{e(d)}</p></div>' for n,d in s["diseases"])
         alt_blocks += f'<div class="sec-head"><h2>Diseases we treat</h2><p class="lede">Most common in fescue and ryegrass lawns during hot, humid stretches.</p></div><div class="grid-3">{cards}</div>'
@@ -738,7 +797,7 @@ def build_service(s):
         ch = "".join(f'<span>{e(c)}</span>' for c in s["chips"])
         mt = ' style="margin-top:48px"' if alt_blocks else ""
         alt_blocks += f'<h2{mt} style="font-size:28px;margin-bottom:20px{";margin-top:48px" if alt_blocks else ""}">{e(s["chips_h"])}</h2><div class="chips">{ch}</div>'
-    if s.get("testimonials"):
+    if s.get("testimonials") and TODOS:
         t = "".join(f'<div class="review"><span class="stars">★★★★★</span><p>Use the existing testimonial from this client.</p><small>{e(r)}, {e(l)}</small> <span class="tag">paste from current page</span></div>' for r,l in s["testimonials"])
         alt_blocks += f'<h2 style="font-size:28px;margin:48px 0 20px">What property managers say</h2><div class="grid-3" style="grid-template-columns:1fr 1fr">{t}</div>'
     if s.get("guarantee"):
@@ -756,7 +815,7 @@ def build_service(s):
   </div>
 </section>
 '''
-    body += final(s["chip"], h=f'Get your free {s["name"].replace("The ","")} estimate.', lede="Tell us where your lawn is. A local expert will contact you with a free estimate and analysis.")
+    body += final(s["chip"], h=f'Get your free {s["name"].replace("The ","")} estimate.', lede="Tell us where your property is. A local expert will contact you with a free estimate and analysis.", form_h=FORM_H[s["slug"]])
     title = f'{kw} {REGION}' + (f' | From {s["price"]}' if s.get("price") else "") + ' | Green Lawn Fertilizing'
     svc = {"@context":"https://schema.org","@type":"Service","name":f'{kw} {REGION}',"serviceType":kw,"description":s["lede"],
            "url":canon(s["slug"]),"provider":{"@id":SITE+"/#business"},
@@ -771,7 +830,7 @@ def build_home():
     body = hero("grill","A couple relaxing by the grill on their green lawn",[("Green Lawn Fertilizing",None)],
         f"Lawn Care & Fertilization {REGION}",
         "A thicker, greener lawn without giving up your weekends.",
-        "Locally owned since 2004 and trusted by 39,000+ homeowners in PA, NJ and DE. Programs start at $54 per application.",
+        f"Locally owned since 2004 and trusted by {CUSTOMERS} customers in PA, NJ and DE. Programs start at $54 per application.",
         ["Free lawn health assessment, no obligation","Eight visits a year, timed to our local seasons","100% satisfaction guarantee: not happy, we come back"],
         lead_form("Lawn care"), price=None)
     body += trust()
@@ -815,7 +874,7 @@ def build_home():
         <p class="lede" style="margin-top:16px">Headquartered at 1025 Andrew Dr. in West Chester, PA, with 7 branch locations across Pennsylvania, New Jersey and Delaware.</p>
         <div class="grid-3" style="grid-template-columns:1fr;gap:14px;margin-top:28px">{acards}</div>
       </div>
-      <figure class="photo-frame"><img src="{img(P["dogskids"],1400)}" alt="A family with kids and dogs on their lawn" loading="lazy"></figure>
+      <figure class="photo-frame"><img src="{src(P["dogskids"],1400)}" alt="A family with kids and dogs on their lawn" loading="lazy"></figure>
     </div>
   </div>
 </section>
@@ -826,7 +885,7 @@ def build_home():
         ("Do I need to be home?","No. Your technician leaves a lawn flag and a service summary after every visit."),
         ("What if I’m not happy with the results?","Our lawn program comes with a 100% satisfaction guarantee. If you’re not happy, we’ll come back."),
         ("When will I see results?","Weeds usually curl and die within 10 to 14 days. Grass gets thicker and greener over the first few treatments."),
-        ("Do I have to sign a contract?","Answer needed: contract and cancellation terms."),
+        *([("Do I have to sign a contract?","Answer needed: contract and cancellation terms.")] if TODOS else []),
         ("Where do you provide service?","Southeastern Pennsylvania, New Jersey and Delaware. We’re headquartered in West Chester, PA, with 7 branch locations."),
     ])
     body += awards()
@@ -842,7 +901,7 @@ def build_estimate():
       <li style="padding:0 0 0 64px;min-height:48px"><h3 style="color:#fff;font-size:19px">Decide with no pressure</h3><p style="color:#C9D0CB">No obligation. No is a fine answer.</p></li>
     </ol>'''
     body = f'''<section class="hero est-hero" style="padding:0">
-  <div class="hero-bg"><img src="{img(P["tech96"],2000)}" alt="A Green Lawn Fertilizing technician talking with a homeowner"></div>
+  <div class="hero-bg"><img src="{src(P["tech96"],2000)}" alt="A Green Lawn Fertilizing technician talking with a homeowner"></div>
   <div class="wrap hero-in">
     <div class="hero-copy">
       <div class="crumb"><a href="@@home@@">Home</a> / Free estimate</div>
@@ -879,7 +938,7 @@ def build_estimate():
          meta_desc("Request a free lawn care estimate and lawn analysis. A local Green Lawn Fertilizing expert will contact you shortly."), body, float_cta=False)
 
 def build_area(a):
-    offer = f'<div class="honest"><b>New Jersey pre-pay offer</b><p>{e(a["offer"])} <span class="tag">confirm current terms</span></p></div>' if a.get("offer") else ""
+    offer = f'<div class="honest"><b>New Jersey pre-pay offer</b><p>{e(a["offer"])}{todo("confirm current terms")}</p></div>' if a.get("offer") else ""
     body = hero("grill",f'A couple enjoying their lawn in {a["name"]}',[("Home","@@home@@"),("Service area",None),(a["name"],None)],
         f'Lawn Care in {a["name"]}', f'Local lawn care in {a["name"]}.', a["lede"],
         ["7 fertilizer applications every 4 to 6 weeks","Crabgrass and weed control, plus pH testing","Free service calls between visits"],
@@ -897,7 +956,7 @@ def build_area(a):
         <div class="chips" style="margin-top:26px">{ch}</div>
         {offer}
       </div>
-      <figure class="photo-frame"><img src="{img(P["tech92"],1400)}" alt="A Green Lawn Fertilizing technician with a homeowner" loading="lazy"></figure>
+      <figure class="photo-frame"><img src="{src(P["tech92"],1400)}" alt="A Green Lawn Fertilizing technician with a homeowner" loading="lazy"></figure>
     </div>
   </div>
 </section>
@@ -926,20 +985,20 @@ def build_area(a):
 def build_about():
     body = hero("tech92","A Green Lawn Fertilizing technician talking with a homeowner at her front door",[("Home","@@home@@"),("About us",None)],
         "About Green Lawn Fertilizing", "Your neighbors’ lawn care company since 2004.",
-        "Locally owned in West Chester. Together with our sister company, Green Pest Solutions, we serve more than 70,000 customers in PA, NJ and DE.",
+        f"Locally owned in West Chester. Together with our sister company, Green Pest Solutions, we serve {CUSTOMERS} customers in PA, NJ and DE.",
         ["Free lawn analysis from a local expert","A program built for your lawn and your goals","100% satisfaction guarantee on our lawn program"],
         lead_form("Lawn care"))
     body += trust()
     tl = "".join(f'<li style="display:grid;grid-template-columns:110px 1fr;gap:18px;padding:12px 0;border-top:1px solid var(--line)"><b style="font-family:var(--serif);color:var(--head);font-size:19px">{e(y)}</b><span style="color:var(--muted);font-size:16.5px">{t}</span></li>' for y,t in [
         ("Early days","Matt Jesson mows lawns in Havertown, PA, through his early twenties"),
         ("2004","Matt founds Green Lawn Fertilizing"),
-        ("2010",'The crew grows and programs expand <span class="tag">confirm year</span>'),
+        ("2010",'The crew grows and programs expand' + todo("confirm year")),
         ("Growth","Green Pest Solutions launches for pest and termite control"),
         ("Today","400+ team members, 7 branches, headquartered in West Chester")])
     body += f'''<section>
   <div class="wrap">
     <div class="split">
-      <figure class="photo-frame"><img src="{img(P["y2010"],1200)}" alt="The Green Lawn Fertilizing team in 2010 standing behind the company sign" loading="lazy"><figcaption>The crew in 2010</figcaption></figure>
+      <figure class="photo-frame"><img src="{src(P["y2010"],1200)}" alt="The Green Lawn Fertilizing team in 2010 standing behind the company sign" loading="lazy"><figcaption>The crew in 2010</figcaption></figure>
       <div>
         <h2>It started with one kid mowing lawns in Havertown.</h2>
         <p class="lede" style="margin-top:16px;font-size:18px">Founder Matt Jesson cut his neighbors’ grass through his early twenties, then founded Green Lawn Fertilizing in 2004. Today we’re one of the largest independent lawn care companies in the Tri-State region, and still locally owned.</p>
@@ -952,7 +1011,7 @@ def build_about():
     body += f'''<section class="alt">
   <div class="wrap">
     <div class="sec-head"><h2>Happy teams take better care of your lawn.</h2><p class="lede">Our mission is to be the leader in the lawn and pest industry by providing a superior customer experience. That starts with treating our team exceptionally well, and it’s why the Philadelphia Business Journal has named us a Best Place to Work eight times.</p></div>
-    <figure class="photo-frame" style="aspect-ratio:16/7"><img src="{img(P["team"],1800)}" alt="Hundreds of Green Lawn Fertilizing team members together in a stadium" loading="lazy"></figure>
+    <figure class="photo-frame" style="aspect-ratio:16/7"><img src="{src(P["team"],1800)}" alt="Hundreds of Green Lawn Fertilizing team members together in a stadium" loading="lazy"></figure>
     <div class="grid-3" style="margin-top:28px">
       <div class="card"><h3 style="font-size:34px">8×</h3><p>Philadelphia Business Journal Best Places to Work</p></div>
       <div class="card"><h3 style="font-size:34px">400+</h3><p>Team members across Green Lawn and Green Pest Solutions</p></div>
@@ -964,7 +1023,7 @@ def build_about():
     body += f'''<section>
   <div class="wrap">
     <div class="split">
-      <figure class="photo-frame"><img src="{img(P["hq"],1400)}" alt="The lobby of the Green Lawn Fertilizing headquarters in West Chester, PA" loading="lazy"></figure>
+      <figure class="photo-frame"><img src="{src(P["hq"],1400)}" alt="The lobby of the Green Lawn Fertilizing headquarters in West Chester, PA" loading="lazy"></figure>
       <div>
         <h2>Headquartered in West Chester, PA</h2>
         <p class="lede" style="margin-top:16px">1025 Andrew Dr., West Chester, PA 19380, with 7 branch locations serving Pennsylvania, New Jersey and Delaware.</p>
@@ -993,7 +1052,9 @@ if __name__ == "__main__":
     build_home(); build_about(); build_estimate()
     for a in AREAS: build_area(a)
     for s in S: build_service(s)
-    urls = "".join(f"  <url><loc>{canon(k) if PATHS[k] else SITE + '/'}</loc></url>\n" for k in PATHS)
+    from concept_pages import build_portal, build_systems
+    build_portal(); build_systems()
+    urls = "".join(f"  <url><loc>{canon(k) if PATHS[k] else SITE + '/'}</loc></url>\n" for k in PATHS if k not in CONCEPT_PAGES)
     with open(os.path.join(OUT, "sitemap.xml"), "w") as f:
         f.write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + urls + '</urlset>\n')
     with open(os.path.join(OUT, "robots.txt"), "w") as f:

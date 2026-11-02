@@ -69,3 +69,68 @@
     addEventListener('scroll',upd,{passive:true});
   }
 })();
+
+// My Lawn portal concept: every action updates the page only. Nothing is saved or sent.
+(function(){
+  const root=document.querySelector('[data-portal]'); if(!root) return;
+  const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+  const ref=()=> 'GLF-'+String(Math.floor(10000+Math.random()*89999));
+  const say=(box,msg,undo)=>{
+    const st=box.querySelector('[data-status]');
+    st.innerHTML=msg?CHECK+'<span>'+msg+'</span>'+(undo?'<button type="button" data-undo>Undo</button>':''):'';
+    const u=st.querySelector('[data-undo]'); if(u) u.addEventListener('click',()=>{undo();u.closest('[data-status]').innerHTML='';});
+  };
+  const show=(el,on)=>{ if(el) el.hidden=!on; };
+  const acts=box=>box.querySelector('[data-acts]');
+
+  // Next visit
+  const visit=root.querySelector('[data-box="visit"]');
+  if(visit){
+    const h=visit.querySelector('h2'), orig=h.textContent, days=visit.querySelector('[data-days]'), note=visit.querySelector('[data-notebox]');
+    visit.addEventListener('click',e=>{
+      const b=e.target.closest('[data-act],[data-day]'); if(!b) return;
+      const a=b.dataset.act;
+      if(a==='skip'){ show(days,false); show(note,false); show(acts(visit),false); h.textContent='Skipped: '+h.textContent;
+        say(visit,'Round 6 is skipped and you won’t be charged for it. Your next visit moves to Round 7.',()=>{h.textContent=orig;show(acts(visit),true);}); }
+      if(a==='move'){ show(note,false); show(days,days.hidden); say(visit,''); }
+      if(b.dataset.day){ const prev=h.textContent; h.textContent=b.dataset.day.replace(/^(\w+), /,(m,d)=>({Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday'}[d]||d)+', ').replace('Jun','June');
+        show(days,false); say(visit,'Moved. You’ll get a text the day before.',()=>{h.textContent=prev;}); }
+      if(a==='note'){ show(days,false); show(note,note.hidden); say(visit,''); if(!note.hidden) note.querySelector('textarea').focus(); }
+      if(a==='save-note'){ const t=note.querySelector('textarea').value.trim(); show(note,false);
+        say(visit,t?'Saved. Your technician sees this note on their route for this visit.':'Nothing to save yet.'); }
+    });
+  }
+
+  // Add-on approval
+  const ap=root.querySelector('[data-box="approve"]');
+  if(ap) ap.addEventListener('click',e=>{
+    const a=(e.target.closest('[data-act]')||{}).dataset?.act; if(!a) return;
+    const label=ap.querySelector('.p-label'), was=label.textContent;
+    show(acts(ap),false);
+    const undo=()=>{show(acts(ap),true);label.textContent=was;ap.classList.remove('done-state');};
+    if(a==='yes'){ label.textContent='Approved'; say(ap,'Approved. Lime goes down at your next visit, and $65 is added to that visit’s charge.',undo); }
+    if(a==='no'){ label.textContent='Declined'; ap.classList.add('done-state'); say(ap,'Got it. No lime this year. We’ll ask again after your fall soil test.',undo); }
+  });
+
+  // Pause or cancel
+  const plan=root.querySelector('[data-box="plan"]');
+  if(plan){
+    const conf=plan.querySelector('[data-confirm]');
+    plan.addEventListener('click',e=>{
+      const a=(e.target.closest('[data-act]')||{}).dataset?.act; if(!a) return;
+      const back=()=>{show(acts(plan),true);show(conf,false);};
+      if(a==='pause'){ show(acts(plan),false); say(plan,'Paused. No visits until you resume. Confirmation '+ref()+' is on its way by text and email.',back); }
+      if(a==='cancel'){ show(acts(plan),false); show(conf,true); say(plan,''); conf.querySelector('.btn-primary').focus(); }
+      if(a==='keep'){ back(); say(plan,'Your program stays as it is.'); }
+      if(a==='confirm-cancel'){ show(conf,false); say(plan,'Cancelled. Confirmation '+ref()+'. Your remaining visits are off the schedule, and a copy is on its way by text and email.',back); }
+    });
+  }
+
+  // Referral link
+  const chop=root.querySelector('[data-box="chop"]');
+  if(chop) chop.addEventListener('click',e=>{
+    if(!e.target.closest('[data-act="share"]')) return;
+    try{ navigator.clipboard && navigator.clipboard.writeText('Referral link (concept demo)'); }catch(_){}
+    say(chop,'Copied. Share it with a neighbor.');
+  });
+})();
