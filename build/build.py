@@ -206,7 +206,7 @@ S = [
 
  dict(slug="fungicide-program", name="Fungicide Program", nav="Lawn disease control",
   chip="Lawn disease", card="Prevent and treat brown patch, dollar spot, red thread and more.",
-  hero="fert", card_img="fungal",
+  hero="fert", card_img="custlawn",
   h1="Stop lawn disease before it spreads.",
   lede="Brown patches and tan spots are often fungus. We prevent and treat the turf diseases common in our region.",
   checks=["Preventive and curative programs","Targets dollar spot, brown patch, red thread and more","Lawn program customers get fungus checks every visit"],
@@ -574,7 +574,7 @@ def build_service(s):
     # Included
     inc = "".join(f'<li>{ICON["check"]}<div>{e(t)}<span>{e(d)}</span></div></li>' for t,d in s["included"])
     wide = s.get("inc_img_wide")
-    photo = f'<figure class="photo-frame"{" style=\"aspect-ratio:auto\"" if wide else ""}><img src="{img(P[s["inc_img"]],1400)}" alt="" loading="lazy"></figure>'
+    photo = f'<figure class="photo-frame{" wide" if wide else ""}"><img src="{img(P[s["inc_img"]],1400)}" alt="" loading="lazy"></figure>'
     extra = ""
     if s.get("honest"):
         extra += f'<div class="honest"><b>{e(s["honest"][0])}</b><p>{e(s["honest"][1])}</p></div>'
