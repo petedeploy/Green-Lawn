@@ -1,0 +1,3 @@
+# Design concept: keep crawlers out. The live site's robots.txt and sitemap apply at launch.
+User-agent: *
+Disallow: /

@@ -78,7 +78,8 @@ nav.main a[aria-current="page"], .dd.current > button{color:var(--turf);box-shad
 .hero-copy{display:flex;flex-direction:column;gap:20px;min-width:0}
 .crumb{font-size:15px;color:rgba(255,255,255,.72)}
 .crumb a{color:rgba(255,255,255,.72)}
-.hero h1{color:#fff;font-size:clamp(40px,4.6vw,60px);font-weight:800;max-width:16ch}
+.hero h1.kw{color:var(--green-lt);font:700 17px/1.3 var(--sans);letter-spacing:.01em}
+.hero .display{font-family:var(--serif);line-height:1.08;letter-spacing:-.01em;color:#fff;font-size:clamp(40px,4.6vw,60px);font-weight:800;max-width:16ch}
 .hero .lede{color:#E4E8E5;font-size:20px;max-width:44ch}
 .checks{list-style:none;margin:2px 0 0;padding:0;display:grid;gap:10px;font-weight:600;font-size:17px}
 .checks li{display:flex;gap:10px;align-items:flex-start}
@@ -91,7 +92,7 @@ nav.main a[aria-current="page"], .dd.current > button{color:var(--turf);box-shad
 
 /* Lead form */
 .lead{background:#fff;color:var(--ink);border-radius:20px;padding:28px 28px 22px;box-shadow:0 30px 60px -25px rgba(0,0,0,.55);position:relative}
-.lead h2{font-size:26px;color:var(--head)}
+.lead .form-title{font-family:var(--serif);font-size:26px;font-weight:800;line-height:1.15;color:var(--head)}
 .lead .sub{color:var(--muted);font-size:15.5px;margin-top:6px}
 .progress{display:flex;gap:6px;margin:18px 0}
 .progress span{flex:1;height:5px;border-radius:5px;background:var(--line)}
@@ -253,7 +254,6 @@ details > div{padding:0 0 22px;color:var(--muted);font-size:17px;max-width:62ch}
 .final{background:var(--turf);color:#fff;padding:88px 0}
 .final-grid{display:grid;grid-template-columns:1fr 430px;gap:64px;align-items:center}
 .final h2{color:#fff;font-size:clamp(32px,3.6vw,48px)}
-.final .lead h2{color:var(--head);font-size:26px}
 .final .lede{color:#CFE6D6;margin-top:16px}
 .final .checks{margin-top:22px}
 .final-phone{margin-top:28px;display:flex;gap:16px;align-items:center}
@@ -263,12 +263,13 @@ details > div{padding:0 0 22px;color:var(--muted);font-size:17px;max-width:62ch}
 
 /* Footer */
 footer{background:var(--char);color:#B9C0BB;padding:64px 0 110px;font-size:15px}
-.foot{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:36px}
+.foot{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1fr;gap:32px}
 footer h4{color:#fff;font:700 15px var(--sans);margin:0 0 12px}
 footer ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 footer a{color:#DDE3DF;text-decoration:none}
 footer a:hover{color:#fff;text-decoration:underline}
-footer .fine{margin-top:44px;padding-top:22px;border-top:1px solid rgba(255,255,255,.12);display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;font-size:13.5px}
+footer .lic{margin-top:36px;font-size:13.5px;color:#9AA49E}
+footer .fine{margin-top:18px;padding-top:22px;border-top:1px solid rgba(255,255,255,.12);display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;font-size:13.5px}
 footer .brand img{height:42px;width:auto;filter:brightness(0) invert(1);opacity:.95;margin-bottom:14px}
 
 /* Floating CTA + mobile bar */
@@ -304,7 +305,7 @@ footer .brand img{height:42px;width:auto;filter:brightness(0) invert(1);opacity:
   .hero-bg{position:relative;inset:auto;height:190px}
   .hero-bg::before{background:linear-gradient(0deg,var(--char) 0%,rgba(27,33,30,0) 55%)}
   .hero .hero-in,.est-hero .hero-in{grid-template-columns:minmax(0,1fr);gap:26px;padding-top:0;padding-bottom:40px;min-height:0}
-  .hero h1{font-size:36px}
+  .hero .display{font-size:36px}
   .hero .lede{font-size:17.5px}
   .checks{font-size:16px}
   .hero-proof{display:none}
